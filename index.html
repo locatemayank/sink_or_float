@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Sink or Float?</title>
+<meta name="description" content="Drop toys in the water and find out: will it sink, or float? A science game for little explorers.">
+<meta name="theme-color" content="#7FD3FF">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Sink or Float">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preload" href="fonts/fredoka-latin.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+@font-face {
+  font-family: 'Fredoka';
+  src: url(fonts/fredoka-latin.woff2) format('woff2');
+  font-weight: 500 700;
+  font-display: swap;
+}
+:root {
+  --ink: #2D2140;
+  --sun: #FFC93C;
+  --sky: #8FDBFF;
+  --water: #3FA9F5;
+  --deep: #2E5AAC;
+  --coral: #FF7A59;
+  --grass: #7CCF5C;
+  --cream: #FFF8E7;
+  --btn: 56px;
+  --pad: 10px;
+  --u: 80px;
+  --cut: 0 4px 0 rgba(45, 33, 64, .35);
+  color-scheme: light;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body {
+  margin: 0; height: 100%; overflow: hidden;
+  touch-action: none; overscroll-behavior: none;
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+}
+body {
+  font-family: 'Fredoka', ui-rounded, 'Arial Rounded MT Bold', system-ui, sans-serif;
+  font-weight: 600; color: var(--ink);
+  background: linear-gradient(#8FDBFF, #DDF5FF 55%, #9BE07E 55%);
+}
+button {
+  font: inherit; color: inherit; border: 0; background: none; padding: 0; cursor: pointer;
+  touch-action: manipulation;
+}
+button:focus-visible { outline: 4px solid var(--deep); outline-offset: 3px; }
+svg { display: block; }
+img { -webkit-user-drag: none; user-select: none; }
+
+#scene { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; }
+#safe { position: fixed; visibility: hidden; pointer-events: none;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+
+/* ---------- round chunky buttons ---------- */
+.round {
+  position: absolute; width: var(--btn); height: var(--btn); border-radius: 50%;
+  display: grid; place-items: center; background: #fff; color: var(--ink);
+  border: 3px solid var(--ink); box-shadow: var(--cut); z-index: 8;
+  transition: transform .12s ease;
+}
+.round:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(45, 33, 64, .35); }
+.round svg { width: 62%; height: 62%; }
+
+/* ---------- top bar ---------- */
+#homeBtn { left: calc(var(--pad) + var(--sl)); top: calc(var(--pad) + var(--st)); background: var(--sun); }
+#soundBtn { left: calc(var(--pad) * 1.8 + var(--btn) + var(--sl)); top: calc(var(--pad) + var(--st)); }
+#stars {
+  position: absolute; z-index: 8; right: calc(var(--pad) + var(--sr)); top: calc(var(--pad) + var(--st));
+  height: var(--btn); padding: 0 calc(var(--btn) * .32) 0 calc(var(--btn) * .14);
+  display: flex; align-items: center; gap: calc(var(--btn) * .1);
+  background: #fff; border: 3px solid var(--ink); border-radius: calc(var(--btn) / 2); box-shadow: var(--cut);
+  font-size: calc(var(--btn) * .5); font-weight: 700;
+}
+#stars .st { width: calc(var(--btn) * .72); height: calc(var(--btn) * .72); }
+#stars.bump { animation: bump .5s ease; }
+@keyframes bump { 40% { transform: scale(1.22); } }
+#caption {
+  position: absolute; z-index: 7; top: calc(var(--pad) + var(--st));
+  height: var(--btn); display: flex; align-items: center; justify-content: center; text-align: center;
+  padding: 0 1em; border-radius: calc(var(--btn) / 2);
+  background: rgba(255, 255, 255, .88); border: 3px solid rgba(45, 33, 64, .18);
+  font-size: clamp(14px, calc(var(--btn) * .34), 26px); line-height: 1.1;
+  opacity: 0; transition: opacity .3s ease; pointer-events: none;
+}
+#caption.on { opacity: 1; }
+
+#shuffleBtn { background: #FFE38A; }
+#netBtn { background: #D9F2FF; width: calc(var(--btn) * .86); height: calc(var(--btn) * .86); }
+
+/* ---------- Fizz the frog ---------- */
+#frog { position: absolute; left: 0; top: 0; z-index: 4; cursor: pointer; will-change: transform; }
+#frog .inner { width: 100%; height: 100%; transform-origin: 50% 100%; }
+.frog-svg { width: 100%; height: 100%; overflow: visible; }
+.frog-svg .m-open { display: none; }
+.talk .frog-svg .m-open { display: inline; }
+.talk .frog-svg .m-shut { display: none; }
+.hop .inner { animation: hop .7s ease; }
+@keyframes hop { 30% { transform: translateY(-35%) scale(.95, 1.08); } 60% { transform: translateY(0) scale(1.08, .92); } }
+.wow .frog-svg .eye { animation: wow .9s ease; transform-box: fill-box; transform-origin: center; }
+@keyframes wow { 25%, 70% { transform: scale(1.25); } }
+
+/* ---------- guess buttons ---------- */
+.gbtn {
+  position: absolute; z-index: 5; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  border: 4px solid var(--ink); border-radius: 22%; box-shadow: var(--cut);
+  font-weight: 700; opacity: 0; transform: scale(.4); pointer-events: none;
+  transition: transform .25s cubic-bezier(.3, 1.6, .5, 1), opacity .2s ease;
+}
+.gbtn svg { width: 74%; height: auto; border-radius: 10%; }
+.gbtn span { line-height: 1; margin-top: 4%; }
+.gbtn.float { background: #CFEFFF; }
+.gbtn.sink { background: #FFE2C2; }
+.gbtn.on { opacity: 1; transform: scale(1); pointer-events: auto; }
+.gbtn.on.nudge { animation: nudge .7s ease 2; }
+@keyframes nudge { 25% { transform: rotate(-6deg) scale(1.06); } 75% { transform: rotate(6deg) scale(1.06); } }
+.gbtn.chosen { transform: scale(1.12); box-shadow: 0 0 0 6px #fff, 0 0 0 10px var(--sun); }
+.gbtn.faded { opacity: .25; transform: scale(.85); pointer-events: none; }
+
+/* ---------- float / sink chart ---------- */
+#chart {
+  position: absolute; z-index: 3; display: grid; grid-template-columns: 1fr 1fr; gap: calc(var(--slot) * .2);
+  padding: calc(var(--slot) * .2); background: rgba(255, 255, 255, .86);
+  border: 3px solid var(--ink); border-radius: calc(var(--slot) * .45); box-shadow: var(--cut);
+  align-content: start;
+}
+#chart .col { display: flex; flex-direction: column; gap: calc(var(--slot) * .16); min-width: 0; }
+#chart .ch-head {
+  display: flex; align-items: center; justify-content: center; gap: 6%;
+  height: calc(var(--slot) * .95); border-radius: calc(var(--slot) * .5); border: 3px solid var(--ink);
+  color: #fff; font-weight: 700; font-size: calc(var(--slot) * .34); white-space: nowrap; overflow: hidden;
+}
+#chart .ch-head svg { height: 64%; width: auto; border-radius: 18%; flex: none; }
+#chart .col.float .ch-head { background: #3FA9F5; }
+#chart .col.sink .ch-head { background: var(--deep); }
+#chart .slots { display: grid; grid-template-columns: repeat(var(--per), var(--slot)); gap: calc(var(--slot) * .16); justify-content: center; }
+#chart .slot {
+  width: var(--slot); height: var(--slot); border-radius: 30%; display: grid; place-items: center;
+  border: 2.5px dashed rgba(45, 33, 64, .25);
+}
+#chart .col.float .slot { background: rgba(63, 169, 245, .1); }
+#chart .col.sink .slot { background: rgba(46, 90, 172, .12); }
+#chart .slot.filled { border: 2.5px solid rgba(45, 33, 64, .55); background: #fff; }
+#chart .slot img { width: 84%; height: 84%; object-fit: contain; }
+#chart .slot.new img { animation: popin .5s cubic-bezier(.3, 1.6, .5, 1); }
+@keyframes popin { from { transform: scale(0); } }
+
+/* ---------- effects layer ---------- */
+#fx { position: fixed; inset: 0; z-index: 6; pointer-events: none; overflow: hidden; }
+.res {
+  position: absolute; transform: translate(-50%, -100%); white-space: nowrap;
+  padding: .18em .6em; border-radius: 1em; border: 3px solid var(--ink);
+  font-weight: 700; color: #fff; box-shadow: var(--cut);
+  animation: res 2.8s ease forwards;
+}
+.res.float { background: #3FA9F5; }
+.res.sink { background: var(--deep); }
+@keyframes res {
+  0% { opacity: 0; transform: translate(-50%, -60%) scale(.3); }
+  12% { opacity: 1; transform: translate(-50%, -100%) scale(1.12); }
+  20% { transform: translate(-50%, -100%) scale(1); }
+  85% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -130%) scale(1); }
+}
+.flyer { position: absolute; left: 0; top: 0; object-fit: contain; }
+.flystar { position: absolute; left: 0; top: 0; }
+
+#hand { position: fixed; left: 0; top: 0; z-index: 9; width: calc(var(--u) * .75); pointer-events: none; opacity: 0; }
+#hand svg { width: 100%; height: auto; filter: drop-shadow(0 3px 0 rgba(45, 33, 64, .3)); }
+
+/* ---------- title screen ---------- */
+.screen { position: fixed; inset: 0; z-index: 20; opacity: 0; visibility: hidden; transition: opacity .35s ease, visibility 0s linear .35s; }
+.screen.on { opacity: 1; visibility: visible; transition: opacity .35s ease; }
+#title {
+  background:
+    radial-gradient(40vmax 22vmax at 85% 8%, rgba(255, 255, 255, .7), transparent 70%),
+    linear-gradient(#8FDBFF, #DDF5FF 62%, #9BE07E 62%, #7CCF5C);
+  display: grid; place-items: center;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+.t-wrap {
+  display: grid; align-items: center; justify-items: center; gap: 2.2vmin;
+  grid-template-areas: "head" "scene" "modes" "prog";
+}
+.t-head { grid-area: head; margin: 0; font-size: min(13vmin, 11vw); line-height: .95; text-align: center; font-weight: 700;
+  color: #fff; -webkit-text-stroke: .09em var(--ink); paint-order: stroke fill; letter-spacing: .02em; }
+.t-head .w-or { font-size: .55em; color: var(--sun); }
+.t-head .w-sink { color: #fff; }
+.t-head .w-sink b, .t-head .w-float b { display: inline-block; font-weight: 700; }
+.t-head .w-sink b { color: #9FB6FF; animation: sinkL 2.6s ease-in-out infinite; }
+.t-head .w-float b { color: #FFD23F; animation: floatL 2.6s ease-in-out infinite; }
+@keyframes sinkL { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(.14em); } }
+@keyframes floatL { 0%, 100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-.12em) rotate(3deg); } }
+.t-scene { grid-area: scene; position: relative; width: min(64vmin, 80vw); height: min(34vmin, 42vw); }
+.t-tank {
+  position: absolute; left: 0; bottom: 0; width: 78%; height: 100%;
+  border: .7vmin solid var(--ink); border-top: 0; border-radius: 0 0 4vmin 4vmin; overflow: hidden;
+  background: linear-gradient(rgba(255, 255, 255, .5) 0 26%, transparent 26%);
+}
+.t-water { position: absolute; left: 0; right: 0; top: 26%; bottom: 0; background: linear-gradient(#A6E3FF, #4FA8EE); }
+.t-tank::after { content: ''; position: absolute; z-index: 3; left: 0; right: 0; top: 26%; bottom: 0; background: rgba(30, 130, 215, .24); pointer-events: none; }
+.t-water::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: .9vmin; background: rgba(255, 255, 255, .9); }
+.t-sand { position: absolute; z-index: 1; left: 0; right: 0; bottom: 0; height: 13%; background: #F4D58A; }
+.t-toy { position: absolute; z-index: 2; }
+.t-duck { width: 26%; left: 8%; top: 5%; animation: bob 2.4s ease-in-out infinite; }
+.t-ball { width: 20%; left: 44%; top: 4%; animation: bob 2.1s ease-in-out infinite .6s; }
+.t-rock { width: 19%; left: 22%; bottom: 7%; }
+.t-key { width: 22%; left: 58%; bottom: 8%; transform: rotate(-8deg); }
+.t-tank .t-water { z-index: 0; }
+@keyframes bob { 0%, 100% { transform: translateY(0) rotate(-4deg); } 50% { transform: translateY(6%) rotate(4deg); } }
+.t-frog { position: absolute; right: 0; bottom: 0; width: 30%; cursor: pointer; }
+.t-frog .inner { transform-origin: 50% 100%; }
+.t-modes { grid-area: modes; display: flex; gap: 3vmin; flex-wrap: wrap; justify-content: center; }
+.mode {
+  display: flex; align-items: center; gap: 2vmin; padding: 1.6vmin 3.6vmin 1.6vmin 2vmin;
+  border: .6vmin solid var(--ink); border-radius: 5vmin; box-shadow: 0 .8vmin 0 rgba(45, 33, 64, .35);
+  font-size: min(5.4vmin, 6vw); font-weight: 700; min-height: 15vmin;
+  transition: transform .12s ease;
+}
+.mode:active { transform: translateY(.6vmin); box-shadow: 0 .2vmin 0 rgba(45, 33, 64, .35); }
+.mode .m-ic { width: 12vmin; height: 12vmin; border-radius: 3vmin; overflow: hidden; border: .45vmin solid var(--ink); background: #fff; flex: none; display: grid; place-items: center; }
+.mode .m-ic svg { width: 100%; height: 100%; }
+.m-guess { background: var(--sun); }
+.m-guess .m-ic { background: #fff; font-size: 9vmin; color: var(--deep); line-height: 1; }
+.m-free { background: #6FC6FF; color: #fff; -webkit-text-stroke: .05em var(--ink); paint-order: stroke fill; }
+.t-prog { grid-area: prog; font-size: min(3.6vmin, 4.4vw); display: flex; align-items: center; gap: 1.2vmin; background: rgba(255, 255, 255, .7); padding: .6vmin 2.4vmin; border-radius: 3vmin; }
+.t-prog svg { width: 5vmin; height: 5vmin; }
+@media (orientation: landscape) {
+  .t-wrap { grid-template-areas: "head head" "scene modes" "scene prog"; grid-template-columns: auto auto; column-gap: 5vmin; }
+  .t-scene { width: min(70vmin, 44vw); height: min(46vmin, 30vw); }
+  .t-modes { flex-direction: column; align-self: end; }
+  .t-prog { align-self: start; }
+}
+.reset {
+  position: absolute; left: max(1.6vmin, env(safe-area-inset-left)); bottom: max(1.6vmin, env(safe-area-inset-bottom));
+  font-size: max(11px, 2.2vmin); padding: .7em 1.1em; border-radius: 2em; overflow: hidden;
+  background: rgba(255, 255, 255, .55); color: rgba(45, 33, 64, .7); font-weight: 600;
+}
+.reset .fill { position: absolute; inset: 0; background: var(--sun); transform: scaleX(0); transform-origin: left; }
+.reset.holding .fill { transform: scaleX(1); transition: transform 2s linear; }
+.reset span { position: relative; }
+
+/* ---------- celebration ---------- */
+#party { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; background: rgba(255, 248, 231, .72);
+  opacity: 0; visibility: hidden; transition: opacity .4s ease, visibility 0s linear .4s; overflow: hidden; }
+#party.on { opacity: 1; visibility: visible; transition: opacity .4s ease; }
+.p-card { position: relative; text-align: center; background: #fff; border: .7vmin solid var(--ink); border-radius: 5vmin;
+  padding: 3vmin 5vmin; box-shadow: 0 1vmin 0 rgba(45, 33, 64, .3); max-width: 92vw; animation: popin .6s cubic-bezier(.3, 1.6, .5, 1); }
+.p-medal { width: 22vmin; margin: 0 auto; }
+.p-title { font-size: min(9vmin, 8vw); font-weight: 700; color: var(--deep); line-height: 1.05; margin: 1vmin 0; }
+.p-toys { display: grid; grid-template-columns: repeat(8, 7vmin); gap: 1vmin; justify-content: center; margin: 1vmin 0 2vmin; }
+.p-toys img { width: 7vmin; height: 7vmin; object-fit: contain; }
+.p-go { font-size: min(5vmin, 5vw); padding: 1.4vmin 5vmin; border-radius: 4vmin; border: .5vmin solid var(--ink); background: var(--sun); font-weight: 700; box-shadow: var(--cut); }
+.confetti { position: absolute; top: -4vmin; width: 1.8vmin; height: 2.8vmin; border-radius: .4vmin; animation: fall linear forwards; }
+@keyframes fall { to { transform: translateY(115vh) rotate(720deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .t-head b, .t-duck, .t-ball { animation: none !important; }
+}
+</style>
+</head>
+<body>
+<canvas id="scene" aria-label="A water tank. Drag toys into the water to see if they sink or float."></canvas>
+<div id="safe"></div>
+
+<button class="round" id="homeBtn" aria-label="Back to the start"></button>
+<button class="round" id="soundBtn" aria-label="Sound on or off"></button>
+<div id="caption" aria-live="polite"></div>
+<div id="stars" aria-label="Stars"><span class="st"></span><b id="starN">0</b></div>
+<button class="round" id="shuffleBtn" aria-label="New toys"></button>
+<button class="round" id="netBtn" aria-label="Scoop the toys out of the water"></button>
+
+<div id="frog" role="button" tabindex="0" aria-label="Fizz the frog"><div class="inner"></div></div>
+<button class="gbtn float" id="gFloat" aria-label="It will float"><span>Float</span></button>
+<button class="gbtn sink" id="gSink" aria-label="It will sink"><span>Sink</span></button>
+
+<div id="chart" aria-label="What floats and what sinks">
+  <div class="col float"><button class="ch-head" data-k="float"><span>Floats</span></button><div class="slots"></div></div>
+  <div class="col sink"><button class="ch-head" data-k="sink"><span>Sinks</span></button><div class="slots"></div></div>
+</div>
+
+<div id="fx"></div>
+<div id="hand" aria-hidden="true"></div>
+
+<section id="title" class="screen on" aria-label="Sink or Float">
+  <div class="t-wrap">
+    <h1 class="t-head"><span class="w-sink"></span> <span class="w-or">or</span> <span class="w-float"></span></h1>
+    <div class="t-scene">
+      <div class="t-tank">
+        <img class="t-toy t-duck" alt=""><img class="t-toy t-ball" alt=""><img class="t-toy t-rock" alt=""><img class="t-toy t-key" alt="">
+        <div class="t-water"></div><div class="t-sand"></div>
+      </div>
+      <div class="t-frog" role="button" aria-label="Fizz the frog"><div class="inner"></div></div>
+    </div>
+    <div class="t-modes">
+      <button class="mode m-guess" id="playGuess"><span class="m-ic">?</span><span>Guess &amp; Splash</span></button>
+      <button class="mode m-free" id="playFree"><span class="m-ic" id="freeIc"></span><span>Free Splash</span></button>
+    </div>
+    <div class="t-prog" id="tProg"></div>
+  </div>
+  <button class="reset" id="resetBtn"><span class="fill"></span><span>Grown-ups: hold to start over</span></button>
+</section>
+
+<div id="party" role="dialog" aria-label="Well done">
+  <div class="p-card">
+    <div class="p-medal" id="pMedal"></div>
+    <div class="p-title">Super Scientist!</div>
+    <div class="p-toys" id="pToys"></div>
+    <button class="p-go" id="pGo">Keep playing</button>
+  </div>
+</div>
+
+<script src="data.js"></script>
+<script src="art.js"></script>
+<script src="app.js"></script>
+<script>
+if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
+}
+</script>
+</body>
+</html>
